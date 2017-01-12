@@ -43,7 +43,8 @@ class CLUE:
             sys.exit(0)
             
 
-    def allocate(self,nodataValue = 0,random_effect = 0.5,error_num = 10,max_interation = 100):
+    def allocate(self,random_effect = 0.5,error_num = 10,max_interation = 100):
+        nodataValue = arcpy.Raster(self.land_map).noDataValue
         x0 = float(arcpy.GetRasterProperties_management(self.land_map,'LEFT').getOutput(0))
         y0 = float(arcpy.GetRasterProperties_management(self.land_map,'BOTTOM').getOutput(0))
         size_land = float(arcpy.GetRasterProperties_management(self.land_map,'CELLSIZEX').getOutput(0))

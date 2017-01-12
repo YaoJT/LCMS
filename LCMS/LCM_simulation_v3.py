@@ -51,6 +51,10 @@ def logistics(factor_rasters,weights,constant,mask):
 def kappa(first_raster,second_raster,nodata_value):
     first_array = arcpy.RasterToNumPyArray(first_raster)
     second_array = arcpy.RasterToNumPyArray(second_raster)
+    try:
+        nodata_value = first_raster.noDataValue
+    except:
+        nodata_value = arcpy.Raster(first_raster).noDataValue
     out_lst = []
 
     index = list(np.unique(first_array))
@@ -73,6 +77,10 @@ def kappa(first_raster,second_raster,nodata_value):
 
 def FRAG(in_raster,nodata_value):
     array = arcpy.RasterToNumPyArray(in_raster)
+    try:
+        nodata_value = in_raster.noDataValue
+    except:
+        nodata_value = arcpy.Raster(in_raster).noDataValue
     index = list(np.unique(array))
     out_lst = []
     try:
@@ -183,7 +191,7 @@ class simulation:
         try:
             self.nodata_value = int(arcpy.Raster(past_map).noDataValue)
         except:
-            self.nodata_value = int(past_map.noDataValue)
+            self.nodata_value = int(arcpy.Raster(past_map).noDataValue)
         self.constant = constant
         self.min_alpha = min_alpha
         self.max_cycle = max_cycle
@@ -219,11 +227,12 @@ class simulation:
         if os.path.exists(out_folder) == False:
             os.makedirs(out_folder)
         input_array = arcpy.RasterToNumPyArray(input_raster)
+        none_value = arcpy.Raster(input_raster).noDataValue
     #    des = arcpy.Describe(input_raster+"/Band_1")
     ###define none_value to 0 or others
-        none_value = self.nodata_value
+##        none_value = self.nodata_value
         input_class = list(np.unique(input_array))
-        input_class.remove(self.nodata_value)
+        input_class.remove(none_value)
 
         num_total = np.sum(input_array != none_value)
     ### create dbf file to record average neighborhood enrichment for each class
@@ -398,7 +407,7 @@ class simulation:
             for w_x in range(len(text_fields)):
                 w_x_r,w_x_g,w_x_b = color[w_x]
                 plt.plot(range(1,len(grad[1][w_x])+1),grad[1][w_x],'-',color =(w_x_r,w_x_g,w_x_b))
-            plt.savefig(os.path.join(out_folder,"iterations-weights_"+str(array_lucc[i]).zfill(2)+'.jpg'))
+            plt.savefig(os.path.join(out_folder,"iterations-weights_"+str(array_lucc[i]).zfill(2)+'.png'))
             plt.close()
             
 
@@ -413,7 +422,7 @@ class simulation:
             raster = logistics(factor_rasters,array_weights[i],C_value,lucc_raster)
             raster.save(result_name)
             out_list[0].append(result_name)
-            plt.savefig(os.path.join(out_folder,"weights_"+str(array_lucc[i]).zfill(2)+'.jpg'))
+            plt.savefig(os.path.join(out_folder,"weights_"+str(array_lucc[i]).zfill(2)+'.png'))
             plt.close()
             
         out_list.append(array_weights)               
@@ -461,7 +470,8 @@ class simulation:
                 probabilities = PRB[0]
                 arcpy.AddMessage("finised processing of probability maps")
                 arcpy.AddMessage("spatial allocation... ...")
-                clue = CLUE.CLUE(land_map = self.past_map,path = os.path.join(self.work_path,raster_name+'_'+str(i+1)),simulate_map = raster_name+str(i+1)+'.tif',
+                clue = CLUE.CLUE(land_map = self.past_map,path = os.path.join(self.work_path,raster_name+'_'+str(i+1)),
+                                 simulate_map = raster_name+str(i+1)+'.tif',
                                  probabilities = probabilities,matrix = trans_p,prt_zone = self.prt_zone)
                 out_file = clue.allocate(error_num = self.error,random_effect = self.random_effect)
                 arcpy.AddMessage("succefully allocated for all categories")
@@ -477,7 +487,8 @@ class simulation:
                     w += 1
                 arcpy.AddMessage("finised processing of probability maps")
                 arcpy.AddMessage("spatial allocation... ...")
-                clue = CLUE.CLUE(land_map = out_file,path = os.path.join(self.work_path,raster_name+'_'+str(i+1)),simulate_map = raster_name+str(i+1)+'.tif',
+                clue = CLUE.CLUE(land_map = out_file,path = os.path.join(self.work_path,raster_name+'_'+str(i+1)),
+                                 simulate_map = raster_name+str(i+1)+'.tif',
                                  probabilities = probabilities,matrix = trans_p,prt_zone = self.prt_zone)
 
                 out_file = clue.allocate(error_num = self.error,random_effect = self.random_effect)
@@ -531,7 +542,7 @@ class simulation:
             f.write(str(kappa_array0[0,j])[:4].center(6))
         f.write('\n')
 ## multi statistic
-        for r in range(kappa_step,max_radius+1,kappa_step):
+        for r in range(kappa_step,max_radius+kappa_step,kappa_step):
             k = r/kappa_step
             arcpy.AddMessage('kappa validating radius = '+str(r))
             print 'kappa validating radius = '+str(r)
@@ -539,7 +550,7 @@ class simulation:
             first_raster = arcpy.sa.FocalStatistics(self.original_map,arcpy.sa.NbrCircle(r,'CELL'),'MAJORITY','DATA')
             second_raster = arcpy.sa.FocalStatistics(out_file,arcpy.sa.NbrCircle(r,'CELL'),'MAJORITY','DATA')
             third_raster = arcpy.sa.FocalStatistics(self.past_map,arcpy.sa.NbrCircle(r,'CELL'),'MAJORITY','DATA')
-            nodata_value = int(first_raster.noDataValue)
+            nodata_value = first_raster.noDataValue
 
             try:
                 kappa_array[k] = kappa(first_raster,second_raster,nodata_value)
